@@ -28,7 +28,7 @@ app.get('/api/notes', (request, response) => {
     })
 })
 
-app.get('/api/notes/:id', (request, response) => {
+app.get('/api/notes/:id', (request, response, next) => {
     const id = request.params.id
 
     Note.findById(id).then(note => {
@@ -36,10 +36,7 @@ app.get('/api/notes/:id', (request, response) => {
 
         response.statusMessage = `Not found note with the id ${id}`
         response.status(404).end()
-    }).catch(error => {
-        console.log(error)
-        response.status(500).end()
-    })
+    }).catch(error => next(error))
 })
 
 app.post('/api/notes', (req, res) => {
@@ -61,11 +58,28 @@ app.post('/api/notes', (req, res) => {
     })
 })
 
-app.delete('/api/notes/:id', (req, res) => {
+app.put('/api/notes/:id', (req, res, next) => {
     const id = req.params.id
-    notes = notes.filter(note => note.id !== id)
+    const {content, important} = req.body
 
-    res.status(204).end()
+    Note.findById(id).then(note => {
+        if(!note) return res.status(404).end()
+
+        note.content = content
+        note.important = important
+
+        return note.save().then(updatedNote => {
+            res.json(updatedNote)
+        })
+    }).catch(error => next(error))
+})
+
+app.delete('/api/notes/:id', (req, res, next) => {
+    const id = req.params.id
+
+    Note.findByIdAndDelete(id).then(() => {
+        res.status(204).end()
+    }).catch(error => next(error))
 })
 
 /*
@@ -77,6 +91,18 @@ const unknownEndpoint = (request, response) => {
 }
 
 app.use(unknownEndpoint)
+
+const errorHandler = (error, req, res, next) => {
+    console.log(error.message)
+
+    if(error.name === 'CastError'){
+        return res.status(400).send({error: "malformatted id"})
+    }
+
+    next(error)
+}
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen(PORT, () => {

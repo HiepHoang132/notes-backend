@@ -29,8 +29,16 @@ app.get('/api/notes', (request, response) => {
 })
 
 app.get('/api/notes/:id', (request, response) => {
-    Note.findById(request.params.id).then(note => {
-        response.json(note)
+    const id = request.params.id
+
+    Note.findById(id).then(note => {
+        if(note) return response.json(note)
+
+        response.statusMessage = `Not found note with the id ${id}`
+        response.status(404).end()
+    }).catch(error => {
+        console.log(error)
+        response.status(500).end()
     })
 })
 

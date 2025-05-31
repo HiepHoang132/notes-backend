@@ -39,14 +39,8 @@ app.get('/api/notes/:id', (request, response, next) => {
     }).catch(error => next(error))
 })
 
-app.post('/api/notes', (req, res) => {
+app.post('/api/notes', (req, res, next) => {
     const body = req.body
-
-    if(!body.content){
-        return res.status(400).json({
-            error: 'content missing'
-        })
-    }
 
     const note = new Note({
         content: body.content,
@@ -55,7 +49,7 @@ app.post('/api/notes', (req, res) => {
 
     note.save().then(savedNote => {
         res.json(savedNote)
-    })
+    }).catch(error => next(error))
 })
 
 app.put('/api/notes/:id', (req, res, next) => {
@@ -97,6 +91,8 @@ const errorHandler = (error, req, res, next) => {
 
     if(error.name === 'CastError'){
         return res.status(400).send({error: "malformatted id"})
+    } else if (error.name === 'ValidationError'){
+        return res.status(400).json({ error: error.message })
     }
 
     next(error)
